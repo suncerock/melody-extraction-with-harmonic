@@ -1,0 +1,11 @@
+{
+    "train_list": "train_npy.txt",
+    "test_list": "test_05_npy.txt",
+
+    "batch_size": 32,
+    "num_epoch": 40,
+    "lr": 4e-3,
+
+    "device": "cuda:1",
+    "save_path": "work_dir/test123"
+}
