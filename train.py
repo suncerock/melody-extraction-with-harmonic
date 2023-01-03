@@ -10,29 +10,28 @@ from utils import *
 from dataset import DatasetWithHarmonic
 from models.msnet_harmonic_loss import MSNet
 
+DEBUG = 1
 
-def train(train_list, test_list, batch_size, num_epoch, lr, device, save_path):
-    if os.path.exists(save_path):
-        raise Exception("{} already exists!".format(save_path))
-    os.mkdir(save_path)
+def train(train_manifest, test_manifest, batch_size, num_epoch, lr, threshold, device, save_path):
+    if not DEBUG:
+        if os.path.exists(save_path):
+            raise Exception("{} already exists!".format(save_path))
+        os.mkdir(save_path)
 
-    if not os.path.exists('train_data.pkl'):
-        X_train, y_train = load_train_data(path=train_list)
-        with open('train_data.pkl', 'wb') as f:
-            pickle.dump((X_train, y_train), f, protocol=4)
-    else:
-        with open('train_data.pkl', 'rb') as f:
-            X_train, y_train = pickle.load(f)
-    test_list = load_list(path=test_list)
+    train_x, train_y = [], []
+    for manifest_path in train_manifest:
+        x, y = load_data_by_segment(manifest_path, progress_bar=True)
+        train_x.append(x)
+        train_y.append(y)
+    train_x, train_y = np.vstack(train_x), np.vstack(train_y)
 
-    dataset = DatasetWithHarmonic(data_tensor=X_train, target_freq=y_train)
+    dataset = DatasetWithHarmonic(train_x=train_x, train_y=train_y)
     dataloader = Data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
-    
+
     model = MSNet(device=device)
 
-    best_epoch = 0
-    best_OA = 0
-    time_series = np.arange(128) * 0.01
+    best_epoch = {name: 0 for name in test_manifest}
+    best_OA = {name: 0 for name in test_manifest}
     
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
@@ -45,45 +44,53 @@ def train(train_list, test_list, batch_size, num_epoch, lr, device, save_path):
 
         for step, batch in enumerate(dataloader):
             optimizer.zero_grad()
-            loss, pred = model(batch)
+            loss, _ = model(batch)
 
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
 
         train_loss /= step + 1
-        # continue
-        model.eval()
-        eval_arr = np.zeros(5, dtype=np.float32)
-        with torch.no_grad():
-            for i in range(len(test_list)):
-                X_test, y_test = load_data(test_list[i])
-                X_test, y_test = torch.from_numpy(X_test).float(), torch.from_numpy(y_test).float()
-                length_x = X_test.size(0)
-                est_freq = []
-                for start in range(0, length_x, 8):
-                    pred_seg = model((
-                        X_test[start:start+8], y_test[start:start+8], y_test[start:start+8], y_test[start:start+8]), requires_loss=False)
-                    est_freq_seg = img2f0(pred_seg.cpu().numpy()).flatten()
-                    est_freq.extend(est_freq_seg)
-                est_freq = np.array(est_freq)
-                ref_freq = bin2f0(f02bin(y_test.numpy().flatten()))
-                time_series = np.arange(len(ref_freq))
-                eval_arr += melody_eval(time_series, ref_freq, time_series, est_freq)
-            
-            eval_arr /= len(test_list)
 
-            print("----------------------")
-            print("Epoch={:3d}\tTrain_loss={:6.4f}".format(epoch, train_loss))
-            print("Valid: VR={:.2f}\tVFA={:.2f}\tRPA={:.2f}\tRCA={:.2f}\tOA={:.2f}".format(eval_arr[0], eval_arr[1],
-                                                                                        eval_arr[2], eval_arr[3],
-                                                                                        eval_arr[4]))
-            if eval_arr[-1] > best_OA:
-                best_OA = eval_arr[-1]
-                best_epoch = epoch
-            torch.save(model.state_dict(), os.path.join(save_path, 'OA_{:.2f}_epoch_{:d}.pth'.format(eval_arr[4], epoch)))
-            print('Best Epoch: ', best_epoch, ' Best OA: ', best_OA)
-            print("Time: {:5.2f}(Total: {:5.2f})".format(time.time() - tick_e, time.time() - tick))
+        print("----------------------")
+        print("Epoch={:3d}\tTrain_loss={:6.4f}".format(epoch, train_loss))
+        model.eval()
+        for manifest_path in test_manifest:
+            eval_arr = np.zeros(5, dtype=np.float32)
+            with torch.no_grad():
+                test_x, test_y = load_data_by_piece(manifest_path)
+                for i in range(len(test_x)):
+                    x_piece, y_piece = segment_one_piece(test_x[i], test_y[i])
+                    x_piece, y_piece = torch.from_numpy(x_piece).float(), torch.from_numpy(y_piece).float()
+                    length = x_piece.size(0)
+                    est_freq = []
+                    for start in range(0, length, batch_size):
+                        pred_seg = model((
+                            x_piece[start: start + batch_size],
+                            y_piece[start: start + batch_size],
+                            y_piece[start: start + batch_size],
+                            y_piece[start: start + batch_size]
+                        ), requires_loss=False)
+                        est_freq_seg = img2f0(pred_seg.cpu().numpy(), threshold=threshold).flatten()
+                        est_freq.extend(est_freq_seg)
+                    est_freq = np.array(est_freq)
+                    ref_freq = bin2f0(f02bin(y_piece.numpy().flatten()))
+                    time_series = np.arange(len(ref_freq))
+                    eval_arr += melody_eval(time_series, ref_freq, time_series, est_freq)
+                
+                eval_arr /= len(test_x)
+
+                print(manifest_path)
+                print("Valid: VR={:.2f}\tVFA={:.2f}\tRPA={:.2f}\tRCA={:.2f}\tOA={:.2f}".format(eval_arr[0], eval_arr[1],
+                                                                                            eval_arr[2], eval_arr[3],
+                                                                                           eval_arr[4]))
+                if eval_arr[-1] > best_OA[manifest_path]:
+                    best_OA[manifest_path] = eval_arr[-1]
+                    best_epoch[manifest_path] = epoch
+                if not DEBUG:
+                    torch.save(model.state_dict(), os.path.join(save_path, '{}_OA_{:.2f}_epoch_{:d}.pth'.format(manifest_path, eval_arr[4], epoch)))
+                print('Best Epoch: ', best_epoch[manifest_path], ' Best OA: ', best_OA[manifest_path])
+        print("Time: {:5.2f}(Total: {:5.2f})".format(time.time() - tick_e, time.time() - tick))
 
 
 if __name__ == '__main__':

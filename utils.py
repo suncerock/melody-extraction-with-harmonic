@@ -1,6 +1,9 @@
+import json
+import time
+from tqdm import tqdm
+
 import numpy as np
 import torch
-import time
 
 import mir_eval
 
@@ -17,7 +20,7 @@ def melody_eval(ref_time, ref_freq, est_time, est_freq):
     eval_arr = np.array([VR, VFA, RPA, RCA, OA])
     return eval_arr
 
-def img2bin(pred, threshold=0.4):
+def img2bin(pred, threshold):
     prob, pred_bin = pred.max(axis=1), pred.argmax(axis=1)
     pred_bin[prob < threshold] = -1
     return pred_bin
@@ -45,45 +48,73 @@ def bin2f0(y):
 def f02img(y):
     return bin2img((f02bin(y)))
 
-def img2f0(y, threshold=0.0036):
+def img2f0(y, threshold):
     return bin2f0(img2bin(y, threshold=threshold))
 
-def load_list(path):
-    with open(path, 'r') as f:
-        data_list = [line.strip() for line in f.readlines()]    
+def load_manifest(manifest_path):
+    with open(manifest_path, 'r') as f:
+        data_list = [json.loads(line) for line in f.readlines()]    
     return data_list
 
-def load_train_data(path):
-    tick = time.time()
-    train_list = load_list(path)
-    X, y = [], []
-    num_seg = 0
-    for i in range(len(train_list)):
-        print('({:d}/{:d}) Loading data: '.format(i+1, len(train_list)), train_list[i])
-        X_data, y_data = load_data(train_list[i])
-        y_data[(y_data > 1250) | (y_data < 32)] = 0
-        seg = len(X_data)
-        num_seg += seg
-        X.append(X_data)
-        y.append(y_data)
-        print('({:d}/{:d})'.format(i+1, len(train_list)), train_list[i], 'loaded: ', '{:2d} segments'.format(seg))
-    print("Training data loaded in {:.2f}(s): {:d} segments".format(time.time() - tick, num_seg))
-    return np.vstack(X), np.vstack(y)
+def read_one_manifest(manifest, f_min=32, f_max=1250):
+    """
+    Read one line of manifest
 
-def load_data(fp):
-    '''
-    X: (N, C, F, T)
-    y: (N, T)
-    '''
-    X = np.load('data/cfp/' + fp)
-    L = X.shape[2]
-    num_seg = L // LEN_SEG
-    X = np.vstack([X[np.newaxis, :, :, LEN_SEG*i:LEN_SEG*i+LEN_SEG] for i in range(num_seg)])
+    Parameter
+    ----------
+    manifest : dict
+        dict containing the cfp path and f0 path
+    
+    Returns
+    ----------
+    np.ndarray
+        (3, F, T), the cfp spectrogram
+    np.ndarray
+        (T, ), the f0 annotation
+    """
+    cfp_path = manifest['cfp_path']
+    f0_path = manifest['f0_path']
+    data_x = np.load(cfp_path)
+    with open(f0_path) as f:
+        data_y = [float(line.strip().split()[1]) for line in f.readlines()]
+    data_y = np.array(data_y, dtype=np.float32)
+    data_y[(data_y < f_min) | (data_y > f_max)] = 0.0
 
-    f = open('data/f0ref/' + fp.replace('.npy', '.txt'))
-    y = []
-    for line in f.readlines():
-        y.append(float(line.strip().split()[1]))
-    num_seg = min(len(y) // LEN_SEG, num_seg) # 防止X比y长
-    y = np.vstack([y[LEN_SEG*i:LEN_SEG*i+LEN_SEG] for i in range(num_seg)])
-    return X, y
+    length = min(data_x.shape[2], data_y.shape[0])
+    return data_x[..., :length], data_y[:length]
+
+def load_data_by_piece(manifest_path, progress_bar=False):
+    """
+    Load a list of data
+
+    Returns
+    ----------
+    List[np.ndarray]
+        a list of ndarray with shape (3, F, T)
+    List[np.ndarray]
+        a list of ndarray with shape (T, )
+    """
+    data_list = load_manifest(manifest_path)
+    x_data, y_data = [], []
+    data_list = data_list if not progress_bar else tqdm(data_list)
+    for data in data_list:
+        x_single, y_single = read_one_manifest(data)
+        y_single[(y_single > 1250) | (y_single < 32)] = 0
+        x_data.append(x_single)
+        y_data.append(y_single)
+    return x_data, y_data
+
+def segment_one_piece(x_data, y_data):
+    num_seg = len(y_data) // LEN_SEG
+    x_data = np.vstack([x_data[np.newaxis, :, :, LEN_SEG * i: LEN_SEG * i + LEN_SEG] for i in range(num_seg)])
+    y_data = np.vstack([y_data[LEN_SEG * i: LEN_SEG * i + LEN_SEG] for i in range(num_seg)])
+    return x_data, y_data
+
+def load_data_by_segment(manifest_path, progress_bar=True):
+    x_data, y_data = load_data_by_piece(manifest_path, progress_bar=progress_bar)
+    x_segment, y_segment = [], []
+    for x, y in zip(x_data, y_data):
+        x_single, y_single = segment_one_piece(x, y)
+        x_segment.append(x_single)
+        y_segment.append(y_single)
+    return np.vstack(x_segment), np.vstack(y_segment)

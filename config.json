@@ -1,11 +1,13 @@
 {
-    "train_list": "train_npy.txt",
-    "test_list": "test_05_npy.txt",
+    "train_manifest": ["train_small.json"],
+    "test_manifest": ["train_small.json", "train_small.json"],
 
     "batch_size": 32,
     "num_epoch": 40,
     "lr": 4e-3,
 
-    "device": "cuda:1",
+    "threshold": 0.0036,
+
+    "device": "cpu",
     "save_path": "work_dir/test123"
 }
