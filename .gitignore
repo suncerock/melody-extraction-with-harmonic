@@ -1,9 +1,12 @@
 .ipynb_checkpoints
 *.ipynb
-*.txt
 __pycache__
 
+# data
+data
+*.json
+*.txt
 *.pkl
 
+# model save
 work_dir
-data

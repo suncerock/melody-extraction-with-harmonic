@@ -23,8 +23,16 @@ def convert_txt_to_json(txt_path, root_path, output_json):
     return
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-i', '--txt_path', type=str)
+    parser.add_argument('-d', '--root_path', type=str)
+    parser.add_argument('-o', '--output_json', type=str)
+
+    args = parser.parse_args()
+
     convert_txt_to_json(
-        txt_path="test_04_npy.txt",
-        root_path="/Users/yiweiding/harmonic-aware-loss-melody/data",
-        output_json="./ADC_2004.json"
+        txt_path=args.txt_path,
+        root_path=args.root_path,
+        output_json=args.output_json
     )
