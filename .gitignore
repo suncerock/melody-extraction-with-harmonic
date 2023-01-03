@@ -1,0 +1,9 @@
+.ipynb_checkpoints
+*.ipynb
+*.txt
+__pycache__
+
+*.pkl
+
+work_dir
+data
