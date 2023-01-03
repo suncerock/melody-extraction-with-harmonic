@@ -106,8 +106,11 @@ def load_data_by_piece(manifest_path, progress_bar=False):
 
 def segment_one_piece(x_data, y_data):
     num_seg = len(y_data) // LEN_SEG
-    x_data = np.vstack([x_data[np.newaxis, :, :, LEN_SEG * i: LEN_SEG * i + LEN_SEG] for i in range(num_seg)])
-    y_data = np.vstack([y_data[LEN_SEG * i: LEN_SEG * i + LEN_SEG] for i in range(num_seg)])
+    f_bin = x_data.shape[1]
+    
+    x_data = x_data[..., :num_seg * LEN_SEG].reshape(3, f_bin, num_seg, LEN_SEG).transpose(2, 0, 1, 3)
+    y_data = y_data[:num_seg * LEN_SEG].reshape(num_seg, LEN_SEG)
+
     return x_data, y_data
 
 def load_data_by_segment(manifest_path, progress_bar=True):
@@ -117,4 +120,4 @@ def load_data_by_segment(manifest_path, progress_bar=True):
         x_single, y_single = segment_one_piece(x, y)
         x_segment.append(x_single)
         y_segment.append(y_single)
-    return np.vstack(x_segment), np.vstack(y_segment)
+    return np.vstack(x_segment[:10]), np.vstack(y_segment[:10])
