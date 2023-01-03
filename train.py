@@ -10,7 +10,7 @@ from utils import *
 from dataset import DatasetWithHarmonic
 from models.msnet_harmonic_loss import MSNet
 
-DEBUG = 1
+DEBUG = 0
 
 def train(train_manifest, test_manifest, batch_size, num_epoch, lr, threshold, device, save_path):
     if not DEBUG:
@@ -87,9 +87,9 @@ def train(train_manifest, test_manifest, batch_size, num_epoch, lr, threshold, d
                 if eval_arr[-1] > best_OA[manifest_path]:
                     best_OA[manifest_path] = eval_arr[-1]
                     best_epoch[manifest_path] = epoch
-                if not DEBUG:
-                    torch.save(model.state_dict(), os.path.join(save_path, '{}_OA_{:.2f}_epoch_{:d}.pth'.format(manifest_path, eval_arr[4], epoch)))
                 print('Best Epoch: ', best_epoch[manifest_path], ' Best OA: ', best_OA[manifest_path])
+        if not DEBUG:
+            torch.save(model.state_dict(), os.path.join(save_path, 'Epoch_{:d}.pth'.format(epoch)))
         print("Time: {:5.2f}(Total: {:5.2f})".format(time.time() - tick_e, time.time() - tick))
 
 
