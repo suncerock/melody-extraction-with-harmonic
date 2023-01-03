@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import Softmax
+
 
 class MSNet(nn.Module):
     def __init__(self, device):
@@ -43,34 +43,35 @@ class MSNet(nn.Module):
         self.up_pool1 = nn.MaxUnpool2d((4, 1))
         self.up_conv1 = nn.Sequential(
             nn.BatchNorm2d(32),
-            nn.Conv2d(32, 1, 5, padding=2),
+            nn.Conv2d(32, 4, 5, padding=2),
             nn.SELU()
         )
-
+        
         self.device = device
         self.to(device)
-        
-        self.loss_fn = nn.BCEWithLogitsLoss()
 
     def forward(self, batch, requires_loss=True):
-        x, y = batch
+        x, y_melody, y_harmonic, y_subharmonic = batch
         x = x.to(self.device)
-        y = y.to(self.device)
         
         c1, ind1 = self.pool1(self.conv1(x))
         c2, ind2 = self.pool2(self.conv2(c1))
         c3, ind3 = self.pool3(self.conv3(c2))
-
+        
         u3 = self.up_conv3(self.up_pool3(c3, ind3))
         u2 = self.up_conv2(self.up_pool2(u3, ind2))
-        output = self.up_conv1(self.up_pool1(u2, ind1))
+        u1 = self.up_conv1(self.up_pool1(u2, ind1))
         
-        output = output.squeeze(dim=1)
+        with torch.no_grad():
+            output = torch.softmax(u1, dim=1)
+            output = torch.softmax(output[:, 1], dim=1)
 
-        output = torch.softmax(output, dim=1)
-        
         if requires_loss:
-            loss = self.loss_fn(output, y.float())
+            target = torch.zeros_like(y_subharmonic).long()
+            target[y_subharmonic == 1] = 3
+            target[y_harmonic == 1] = 2
+            target[y_melody == 1] = 1
+            loss = F.cross_entropy(u1, target.to(self.device))
             return loss, output
         else:
             return output

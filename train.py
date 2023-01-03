@@ -7,9 +7,8 @@ import torch.nn as nn
 import torch.utils.data as Data
 
 from utils import *
-from dataset import Dataset, DatasetWithHarmonic
-# from msnet import MSNet
-from msnet_harmonic_loss import MSNet
+from dataset import DatasetWithHarmonic
+from models.msnet_harmonic_loss import MSNet
 
 
 def train(train_list, test_list, batch_size, num_epoch, lr, device, save_path):
@@ -26,7 +25,6 @@ def train(train_list, test_list, batch_size, num_epoch, lr, device, save_path):
             X_train, y_train = pickle.load(f)
     test_list = load_list(path=test_list)
 
-    # dataset = Dataset(data_tensor=X_train, target_freq=y_train)
     dataset = DatasetWithHarmonic(data_tensor=X_train, target_freq=y_train)
     dataloader = Data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
     
