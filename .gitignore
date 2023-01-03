@@ -6,7 +6,7 @@ __pycache__
 data
 *.json
 *.txt
-*.pkl
+*.h5
 
 # model save
 work_dir
