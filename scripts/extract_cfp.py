@@ -67,7 +67,7 @@ def STFT(x, fr, fs, Hop, h):
         tfr[indices-1, icol] = x[ti+tau-1] * h[Lh+tau-1] \
                                 /np.linalg.norm(h[Lh+tau-1])           
                             
-    tfr = abs(scipy.fftpack.fft(tfr, n=N, axis=0))  
+    tfr = abs(np.fft.fft(tfr, n=N, axis=0))  
     return tfr, f, t, N
 
 def nonlinear_func(X, g, cutoff):

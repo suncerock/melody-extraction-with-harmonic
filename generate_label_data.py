@@ -8,7 +8,7 @@ from models.msnet_harmonic_loss import MSNet
 from models.ftanet_harmonic_loss import FTANet
 from utils import *
 
-def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_melody=0.0040, threshold_non_melody=0.0032):
+def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_melody=0.0040, threshold_non_melody=0.0034):
     model = MSNet(device=device)
     model.load_state_dict(torch.load(ckpt, map_location=device))
 
