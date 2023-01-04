@@ -1,6 +1,7 @@
 import os
 import json
 import h5py
+import time
 
 import torch
 import torch.nn as nn
@@ -13,28 +14,18 @@ from models.ftanet_harmonic_loss import FTANet
 
 DEBUG = 0
 
-def train(train_manifest, test_manifest, batch_size, num_epoch, lr, threshold, device, save_path):
+def train(train_manifest, test_manifest, batch_size, num_epoch, lr, step_size, threshold, device, save_path):
     if not DEBUG:
         if os.path.exists(save_path):
             raise Exception("{} already exists!".format(save_path))
         os.mkdir(save_path)
 
-    if not os.path.exists('train_data.h5'):
-        train_x, train_y = [], []
-        for manifest_path in train_manifest:
-            x, y = load_data_by_segment(manifest_path, progress_bar=False)
-            train_x.append(x)
-            train_y.append(y)
-        train_x, train_y = np.vstack(train_x), np.vstack(train_y)
-
-        hf = h5py.File('train_data.h5', 'w')
-        hf.create_dataset('train_x', data=train_x)
-        hf.create_dataset('train_y', data=train_y)
-        hf.close()
-    else:
-        hf = h5py.File('train_data.h5', 'r')
-        train_x = np.array(hf.get('train_x'))
-        train_y = np.array(hf.get('train_y'))
+    train_x, train_y = [], []
+    for manifest_path in train_manifest:
+        x, y = load_data_by_segment(manifest_path, progress_bar=False)
+        train_x.append(x)
+        train_y.append(y)
+    train_x, train_y = np.vstack(train_x), np.vstack(train_y)
 
     dataset = DatasetWithHarmonic(train_x=train_x, train_y=train_y)
     dataloader = Data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)

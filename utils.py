@@ -1,5 +1,4 @@
 import json
-import time
 from tqdm import tqdm
 
 import numpy as np
@@ -120,4 +119,4 @@ def load_data_by_segment(manifest_path, progress_bar=True):
         x_single, y_single = segment_one_piece(x, y)
         x_segment.append(x_single)
         y_segment.append(y_single)
-    return np.vstack(x_segment[:10]), np.vstack(y_segment[:10])
+    return np.vstack(x_segment), np.vstack(y_segment)
