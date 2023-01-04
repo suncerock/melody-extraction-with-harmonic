@@ -4,8 +4,9 @@ import torch.utils.data as Data
 from utils import f02img
     
 class DatasetWithHarmonic(Data.Dataset):
-    def __init__(self, train_x, train_y):
+    def __init__(self, train_x, train_y, train_mask):
         self.data_tensor = torch.from_numpy(train_x).float()
+        self.mask_tensor = torch.from_numpy(train_mask).int()
         
         self.target_freq = train_y
         
@@ -20,7 +21,7 @@ class DatasetWithHarmonic(Data.Dataset):
         self.subharmonic_target = torch.from_numpy(f02img(self.subharmonic_freq))
 
     def __getitem__(self, index):
-        return self.data_tensor[index], self.melody_target[index], self.harmonic_target[index], self.subharmonic_target[index]
+        return self.data_tensor[index], self.melody_target[index], self.harmonic_target[index], self.subharmonic_target[index], self.mask_tensor[index]
 
     def __len__(self):
         return self.data_tensor.size(0)

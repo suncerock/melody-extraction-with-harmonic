@@ -2,7 +2,6 @@ import json
 from tqdm import tqdm
 
 import numpy as np
-import torch
 
 import mir_eval
 
@@ -75,12 +74,13 @@ def read_one_manifest(manifest, f_min=32, f_max=1250):
     f0_path = manifest['f0_path']
     data_x = np.load(cfp_path)
     with open(f0_path) as f:
-        data_y = [float(line.strip().split()[1]) for line in f.readlines()]
-    data_y = np.array(data_y, dtype=np.float32)
+        data_y_mask = [(float(line.strip().split()[1]), float(line.strip().split()[2])) for line in f.readlines()]
+    data_y_mask = np.array(data_y_mask)
+    data_y, data_mask = data_y_mask[:, 0].astype(np.float32), data_y_mask[:, 1].astype(np.int32)
     data_y[(data_y < f_min) | (data_y > f_max)] = 0.0
 
     length = min(data_x.shape[2], data_y.shape[0])
-    return data_x[..., :length], data_y[:length]
+    return data_x[..., :length], data_y[:length], data_mask[:length]
 
 def load_data_by_piece(manifest_path, progress_bar=False):
     """
@@ -94,29 +94,31 @@ def load_data_by_piece(manifest_path, progress_bar=False):
         a list of ndarray with shape (T, )
     """
     data_list = load_manifest(manifest_path)
-    x_data, y_data = [], []
+    x_data, y_data, mask_data = [], [], []
     data_list = data_list if not progress_bar else tqdm(data_list)
     for data in data_list:
-        x_single, y_single = read_one_manifest(data)
-        y_single[(y_single > 1250) | (y_single < 32)] = 0
+        x_single, y_single, mask_single = read_one_manifest(data)
         x_data.append(x_single)
         y_data.append(y_single)
-    return x_data, y_data
+        mask_data.append(mask_single)
+    return x_data, y_data, mask_data
 
-def segment_one_piece(x_data, y_data):
+def segment_one_piece(x_data, y_data, mask_data):
     num_seg = len(y_data) // LEN_SEG
     f_bin = x_data.shape[1]
     
     x_data = x_data[..., :num_seg * LEN_SEG].reshape(3, f_bin, num_seg, LEN_SEG).transpose(2, 0, 1, 3)
     y_data = y_data[:num_seg * LEN_SEG].reshape(num_seg, LEN_SEG)
+    mask_data = mask_data[:num_seg * LEN_SEG].reshape(num_seg, LEN_SEG)
 
-    return x_data, y_data
+    return x_data, y_data, mask_data
 
 def load_data_by_segment(manifest_path, progress_bar=True):
-    x_data, y_data = load_data_by_piece(manifest_path, progress_bar=progress_bar)
-    x_segment, y_segment = [], []
-    for x, y in zip(x_data, y_data):
-        x_single, y_single = segment_one_piece(x, y)
+    x_data, y_data, mask_data = load_data_by_piece(manifest_path, progress_bar=progress_bar)
+    x_segment, y_segment, mask_segment = [], [], []
+    for x, y, mask in zip(x_data, y_data, mask_data):
+        x_single, y_single, mask_single= segment_one_piece(x, y, mask)
         x_segment.append(x_single)
         y_segment.append(y_single)
-    return np.vstack(x_segment), np.vstack(y_segment)
+        mask_segment.append(mask_single)
+    return np.vstack(x_segment), np.vstack(y_segment), np.vstack(mask_segment)

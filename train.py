@@ -20,17 +20,18 @@ def train(train_manifest, test_manifest, batch_size, num_epoch, lr, step_size, t
             raise Exception("{} already exists!".format(save_path))
         os.mkdir(save_path)
 
-    train_x, train_y = [], []
+    train_x, train_y, train_mask = [], [], []
     for manifest_path in train_manifest:
-        x, y = load_data_by_segment(manifest_path, progress_bar=False)
+        x, y, mask = load_data_by_segment(manifest_path, progress_bar=False)
         train_x.append(x)
         train_y.append(y)
-    train_x, train_y = np.vstack(train_x), np.vstack(train_y)
+        train_mask.append(mask)
+    train_x, train_y, train_mask = np.vstack(train_x), np.vstack(train_y), np.vstack(train_mask)
 
-    dataset = DatasetWithHarmonic(train_x=train_x, train_y=train_y)
+    dataset = DatasetWithHarmonic(train_x=train_x, train_y=train_y, train_mask=train_mask)
     dataloader = Data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
 
-    model = FTANet(device=device)
+    model = MSNet(device=device)
 
     best_epoch = {name: 0 for name in test_manifest}
     best_OA = {name: 0 for name in test_manifest}
@@ -62,10 +63,10 @@ def train(train_manifest, test_manifest, batch_size, num_epoch, lr, step_size, t
         for manifest_path in test_manifest:
             eval_arr = np.zeros(5, dtype=np.float32)
             with torch.no_grad():
-                test_x, test_y = load_data_by_piece(manifest_path)
+                test_x, test_y, test_mask = load_data_by_piece(manifest_path)
                 for i in range(len(test_x)):
-                    x_piece, y_piece = segment_one_piece(test_x[i], test_y[i])
-                    x_piece, y_piece = torch.from_numpy(x_piece).float(), torch.from_numpy(y_piece).float()
+                    x_piece, y_piece, mask_piece = segment_one_piece(test_x[i], test_y[i], test_mask[i])
+                    x_piece, y_piece, mask_piece = torch.from_numpy(x_piece).float(), torch.from_numpy(y_piece).float(), torch.from_numpy(mask_piece).float()
                     length = x_piece.size(0)
                     est_freq = []
                     for start in range(0, length, batch_size):
@@ -73,7 +74,8 @@ def train(train_manifest, test_manifest, batch_size, num_epoch, lr, step_size, t
                             x_piece[start: start + batch_size],
                             y_piece[start: start + batch_size],
                             y_piece[start: start + batch_size],
-                            y_piece[start: start + batch_size]
+                            y_piece[start: start + batch_size],
+                            mask_piece[start: start + batch_size]
                         ), requires_loss=False)
                         est_freq_seg = img2f0(pred_seg.cpu().numpy(), threshold=threshold).flatten()
                         est_freq.extend(est_freq_seg)

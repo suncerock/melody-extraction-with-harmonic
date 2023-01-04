@@ -155,7 +155,7 @@ class FTANet(nn.Module):
         self.to(device)
 
     def forward(self, batch, requires_loss=True):
-        x, y_melody, y_harmonic, y_subharmonic = batch
+        x, y_melody, y_harmonic, y_subharmonic, mask = batch
         x = x.to(self.device)
         
         x = self.bn_layer(x)
@@ -193,7 +193,8 @@ class FTANet(nn.Module):
             target[y_subharmonic == 1] = 3
             target[y_harmonic == 1] = 2
             target[y_melody == 1] = 1
-            loss = F.cross_entropy(x, target.to(self.device))
-            return loss, output
+            loss = F.cross_entropy(x, target.to(self.device), reduction='none')
+            loss *= mask.unsqueeze(dim=1).to(self.device)
+            return torch.mean(loss), output
         else:
             return output
