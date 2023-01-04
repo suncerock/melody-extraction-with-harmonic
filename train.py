@@ -9,6 +9,7 @@ import torch.utils.data as Data
 from utils import *
 from dataset import DatasetWithHarmonic
 from models.msnet_harmonic_loss import MSNet
+from models.ftanet_harmonic_loss import FTANet
 
 DEBUG = 0
 
@@ -21,7 +22,7 @@ def train(train_manifest, test_manifest, batch_size, num_epoch, lr, threshold, d
     if not os.path.exists('train_data.h5'):
         train_x, train_y = [], []
         for manifest_path in train_manifest:
-            x, y = load_data_by_segment(manifest_path, progress_bar=True)
+            x, y = load_data_by_segment(manifest_path, progress_bar=False)
             train_x.append(x)
             train_y.append(y)
         train_x, train_y = np.vstack(train_x), np.vstack(train_y)
@@ -32,18 +33,19 @@ def train(train_manifest, test_manifest, batch_size, num_epoch, lr, threshold, d
         hf.close()
     else:
         hf = h5py.File('train_data.h5', 'r')
-        train_x = hf.get('train_x')
-        train_y = hf.get('train_y')
+        train_x = np.array(hf.get('train_x'))
+        train_y = np.array(hf.get('train_y'))
 
     dataset = DatasetWithHarmonic(train_x=train_x, train_y=train_y)
     dataloader = Data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
 
-    model = MSNet(device=device)
+    model = FTANet(device=device)
 
     best_epoch = {name: 0 for name in test_manifest}
     best_OA = {name: 0 for name in test_manifest}
     
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.5)
 
     tick = time.time()
     for epoch in range(num_epoch):
@@ -61,6 +63,7 @@ def train(train_manifest, test_manifest, batch_size, num_epoch, lr, threshold, d
             train_loss += loss.item()
 
         train_loss /= step + 1
+        scheduler.step()
 
         print("----------------------")
         print("Epoch={:3d}\tTrain_loss={:6.4f}".format(epoch, train_loss))
