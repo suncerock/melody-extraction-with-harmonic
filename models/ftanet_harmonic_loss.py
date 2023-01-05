@@ -158,6 +158,24 @@ class FTANet(nn.Module):
         x, y_melody, y_harmonic, y_subharmonic, mask = batch
         x = x.to(self.device)
         
+        x = self.forward_feature_map(x)
+
+        with torch.no_grad():
+            output = torch.softmax(x, dim=1)
+            output = torch.softmax(output[:, 1], dim=1)
+
+        if requires_loss:
+            target = torch.zeros_like(y_subharmonic).long()
+            target[y_subharmonic == 1] = 3
+            target[y_harmonic == 1] = 2
+            target[y_melody == 1] = 1
+            loss = F.cross_entropy(x, target.to(self.device), reduction='none')
+            loss *= mask.unsqueeze(dim=1).to(self.device)
+            return torch.mean(loss), output
+        else:
+            return output
+
+    def forward_feature_map(self, x):
         x = self.bn_layer(x)
 
         x_r, x_t, x_f = self.fta_1(x)
@@ -183,18 +201,4 @@ class FTANet(nn.Module):
 
         x_r, x_t, x_f = self.fta_7(x)
         x = self.sf_7([x_r, x_t, x_f])
-
-        with torch.no_grad():
-            output = torch.softmax(x, dim=1)
-            output = torch.softmax(output[:, 1], dim=1)
-
-        if requires_loss:
-            target = torch.zeros_like(y_subharmonic).long()
-            target[y_subharmonic == 1] = 3
-            target[y_harmonic == 1] = 2
-            target[y_melody == 1] = 1
-            loss = F.cross_entropy(x, target.to(self.device), reduction='none')
-            loss *= mask.unsqueeze(dim=1).to(self.device)
-            return torch.mean(loss), output
-        else:
-            return output
+        return x

@@ -54,13 +54,7 @@ class MSNet(nn.Module):
         x, y_melody, y_harmonic, y_subharmonic, mask = batch
         x = x.to(self.device)
         
-        c1, ind1 = self.pool1(self.conv1(x))
-        c2, ind2 = self.pool2(self.conv2(c1))
-        c3, ind3 = self.pool3(self.conv3(c2))
-        
-        u3 = self.up_conv3(self.up_pool3(c3, ind3))
-        u2 = self.up_conv2(self.up_pool2(u3, ind2))
-        u1 = self.up_conv1(self.up_pool1(u2, ind1))
+        u1 = self.forward_feature_map(x)
         
         with torch.no_grad():
             output = torch.softmax(u1, dim=1)
@@ -76,3 +70,13 @@ class MSNet(nn.Module):
             return torch.mean(loss), output
         else:
             return output
+
+    def forward_feature_map(self, x):
+        c1, ind1 = self.pool1(self.conv1(x))
+        c2, ind2 = self.pool2(self.conv2(c1))
+        c3, ind3 = self.pool3(self.conv3(c2))
+        
+        u3 = self.up_conv3(self.up_pool3(c3, ind3))
+        u2 = self.up_conv2(self.up_pool2(u3, ind2))
+        u1 = self.up_conv1(self.up_pool1(u2, ind1))
+        return u1
