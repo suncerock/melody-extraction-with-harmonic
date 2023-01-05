@@ -8,7 +8,7 @@ from models.msnet_harmonic_loss import MSNet
 from models.ftanet_harmonic_loss import FTANet
 from utils import *
 
-def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold=0.0036, threshold_melody=0.00375, threshold_non_melody=0.00345):
+def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_melody=0.004, threshold_non_melody=0.0035):
     model = MSNet(device=device)
     model.load_state_dict(torch.load(ckpt, map_location=device))
 
@@ -34,7 +34,7 @@ def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold=0.
             subharmonic_prob, subharmonic_bin = output[:, 3].max(axis=1), output[:, 3].argmax(axis=1)
 
             mask_seg = np.ones_like(melody_prob)
-            melody_bin[melody_prob < threshold] = -1
+            melody_bin[melody_prob < threshold_melody] = -1
             f0_seg = bin2f0(melody_bin) 
             
             melody_fail = (melody_prob < threshold_melody) & (melody_prob > threshold_non_melody)
@@ -42,7 +42,7 @@ def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold=0.
             subharmonic_fail = (melody_prob > threshold_melody) & (subharmonic_prob > threshold_melody) & ((melody_bin - subharmonic_bin > 120) | (melody_bin - subharmonic_bin < 0))
             
             mask_seg[melody_fail | harmonic_fail | subharmonic_fail] = 0.0
-
+            
             f0ref.extend(f0_seg.flatten())
             f0mask.extend(mask_seg.flatten())
             
@@ -60,11 +60,15 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--manifest_path', type=str)
     parser.add_argument('--ckpt', type=str)
     parser.add_argument('--device', type=str)
+    parser.add_argument('-p_min', '--threshold_melody', type=float, default=0.004)
+    parser.add_argument('-p_max', '--threshold_non_melody', type=float, default=0.0035)
 
     args = parser.parse_args()
 
     generate_label_data(
         manifest_path=args.manifest_path,
         ckpt=args.ckpt,
-        device=args.device
+        device=args.device,
+        threshold_melody=args.threshold_melody,
+        threshold_non_melody=args.threshold_non_melody
     )
