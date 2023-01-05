@@ -8,7 +8,7 @@ from models.msnet_harmonic_loss import MSNet
 from models.ftanet_harmonic_loss import FTANet
 from utils import *
 
-def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_melody=0.0040, threshold_non_melody=0.0034):
+def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold=0.0036, threshold_melody=0.00375, threshold_non_melody=0.00345):
     model = MSNet(device=device)
     model.load_state_dict(torch.load(ckpt, map_location=device))
 
@@ -21,29 +21,31 @@ def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_me
         x_data = np.load(cfp_path)
         y_data = np.zeros(x_data.shape[2])
         y_mask = np.zeros(x_data.shape[2])
-        x_data, y_data, y_mask = segment_one_piece(x_data, y_data, y_mask)
+        x_data, _, _ = segment_one_piece(x_data, y_data, y_mask)
         
-        x_tensor, y_tensor = torch.from_numpy(x_data).float(), torch.from_numpy(y_data)
+        x_tensor = torch.from_numpy(x_data).float()
         for start in range(0, len(x_data), batch_size):
-            pred_seg = model((
-                x_tensor[start: start + batch_size],
-                y_tensor[start: start + batch_size],
-                y_tensor[start: start + batch_size],
-                y_tensor[start: start + batch_size],
-                y_tensor[start: start + batch_size],
-            ), requires_loss=False).cpu().numpy()
+            with torch.no_grad():
+                output = model.forward_feature_map((x_tensor[start: start + batch_size].to(device)))
+                output = torch.softmax(output, dim=1).cpu().numpy()
             
-            prob, bin_seg = pred_seg.max(axis=1), pred_seg.argmax(axis=1)
-            mask_seg = np.zeros_like(prob)
-            mask_seg[(prob > threshold_melody) | (prob < threshold_non_melody)] = 1.0
-            bin_seg[prob < threshold_melody] = -1
-            f0_seg= bin2f0(bin_seg)
+            melody_prob, melody_bin = output[:, 1].max(axis=1), output[:, 1].argmax(axis=1)
+            harmonic_prob, harmonic_bin = output[:, 2].max(axis=1), output[:, 2].argmax(axis=1)
+            subharmonic_prob, subharmonic_bin = output[:, 3].max(axis=1), output[:, 3].argmax(axis=1)
 
-            mask_seg = mask_seg.flatten()
-            f0_seg = f0_seg.flatten()
+            mask_seg = np.ones_like(melody_prob)
+            melody_bin[melody_prob < threshold] = -1
+            f0_seg = bin2f0(melody_bin) 
             
-            f0ref.extend(f0_seg)
-            f0mask.extend(mask_seg)
+            melody_fail = (melody_prob < threshold_melody) & (melody_prob > threshold_non_melody)
+            harmonic_fail = (melody_prob > threshold_melody) & (harmonic_prob > threshold_melody) & ((harmonic_bin - melody_bin > 120) | (harmonic_bin - melody_bin < 0))
+            subharmonic_fail = (melody_prob > threshold_melody) & (subharmonic_prob > threshold_melody) & ((melody_bin - subharmonic_bin > 120) | (melody_bin - subharmonic_bin < 0))
+            
+            mask_seg[melody_fail | harmonic_fail | subharmonic_fail] = 0.0
+
+            f0ref.extend(f0_seg.flatten())
+            f0mask.extend(mask_seg.flatten())
+            
 
         lines = [['{:.3f}'.format(i / 100), '{:.3f}'.format(f0ref[i]), '{:.1f}'.format(f0mask[i])] for i in range(len(f0ref))]
         lines = ['\t'.join(line) + '\n' for line in lines]
