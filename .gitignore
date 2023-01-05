@@ -1,6 +1,7 @@
 .ipynb_checkpoints
 *.ipynb
 __pycache__
+.history
 
 # data
 data
@@ -10,3 +11,4 @@ data
 
 # model save
 work_dir
+log*

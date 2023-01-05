@@ -20,7 +20,8 @@ def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_me
 
         x_data = np.load(cfp_path)
         y_data = np.zeros(x_data.shape[2])
-        x_data, y_data = segment_one_piece(x_data, y_data)
+        y_mask = np.zeros(x_data.shape[2])
+        x_data, y_data, y_mask = segment_one_piece(x_data, y_data, y_mask)
         
         x_tensor, y_tensor = torch.from_numpy(x_data).float(), torch.from_numpy(y_data)
         for start in range(0, len(x_data), batch_size):
@@ -28,7 +29,8 @@ def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_me
                 x_tensor[start: start + batch_size],
                 y_tensor[start: start + batch_size],
                 y_tensor[start: start + batch_size],
-                y_tensor[start: start + batch_size]
+                y_tensor[start: start + batch_size],
+                y_tensor[start: start + batch_size],
             ), requires_loss=False).cpu().numpy()
             
             prob, bin_seg = pred_seg.max(axis=1), pred_seg.argmax(axis=1)
