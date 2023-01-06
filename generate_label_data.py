@@ -60,8 +60,8 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--manifest_path', type=str)
     parser.add_argument('--ckpt', type=str)
     parser.add_argument('--device', type=str)
-    parser.add_argument('-p_min', '--threshold_melody', type=float, default=0.004)
-    parser.add_argument('-p_max', '--threshold_non_melody', type=float, default=0.0035)
+    parser.add_argument('-p_min', '--threshold_melody', type=float, default=0.005)
+    parser.add_argument('-p_max', '--threshold_non_melody', type=float, default=0.0036)
 
     args = parser.parse_args()
 
