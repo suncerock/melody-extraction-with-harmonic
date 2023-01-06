@@ -9,6 +9,7 @@ def generate_json_from_dir(root_path, output_json, generate_by='cfp'):
 
     for file in file_list:
         data = dict(
+            wav_path=os.path.join(root_path, 'wav', '{}.wav'.format(file)),
             cfp_path=os.path.join(root_path, 'cfp', '{}.npy'.format(file)),
             f0_path=os.path.join(root_path, 'f0ref', '{}.txt'.format(file))
         )
