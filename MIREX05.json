@@ -1,0 +1,9 @@
+{"wav_path": "../melody_extraction_dataset/MIREX05/wav/train09.wav", "cfp_path": "../melody_extraction_dataset/MIREX05/cfp/train09.npy", "f0_path": "../melody_extraction_dataset/MIREX05/f0ref/train09.txt"}
+{"wav_path": "../melody_extraction_dataset/MIREX05/wav/train03.wav", "cfp_path": "../melody_extraction_dataset/MIREX05/cfp/train03.npy", "f0_path": "../melody_extraction_dataset/MIREX05/f0ref/train03.txt"}
+{"wav_path": "../melody_extraction_dataset/MIREX05/wav/train02.wav", "cfp_path": "../melody_extraction_dataset/MIREX05/cfp/train02.npy", "f0_path": "../melody_extraction_dataset/MIREX05/f0ref/train02.txt"}
+{"wav_path": "../melody_extraction_dataset/MIREX05/wav/train08.wav", "cfp_path": "../melody_extraction_dataset/MIREX05/cfp/train08.npy", "f0_path": "../melody_extraction_dataset/MIREX05/f0ref/train08.txt"}
+{"wav_path": "../melody_extraction_dataset/MIREX05/wav/train04.wav", "cfp_path": "../melody_extraction_dataset/MIREX05/cfp/train04.npy", "f0_path": "../melody_extraction_dataset/MIREX05/f0ref/train04.txt"}
+{"wav_path": "../melody_extraction_dataset/MIREX05/wav/train07.wav", "cfp_path": "../melody_extraction_dataset/MIREX05/cfp/train07.npy", "f0_path": "../melody_extraction_dataset/MIREX05/f0ref/train07.txt"}
+{"wav_path": "../melody_extraction_dataset/MIREX05/wav/train01.wav", "cfp_path": "../melody_extraction_dataset/MIREX05/cfp/train01.npy", "f0_path": "../melody_extraction_dataset/MIREX05/f0ref/train01.txt"}
+{"wav_path": "../melody_extraction_dataset/MIREX05/wav/train06.wav", "cfp_path": "../melody_extraction_dataset/MIREX05/cfp/train06.npy", "f0_path": "../melody_extraction_dataset/MIREX05/f0ref/train06.txt"}
+{"wav_path": "../melody_extraction_dataset/MIREX05/wav/train05.wav", "cfp_path": "../melody_extraction_dataset/MIREX05/cfp/train05.npy", "f0_path": "../melody_extraction_dataset/MIREX05/f0ref/train05.txt"}
