@@ -10,7 +10,9 @@ from utils import load_manifest, f02img
 
 class DatasetWithHarmonic(Data.Dataset):
     def __init__(self, manifest_path, sr=8000, hop=80, len_seg=128, f_min=32, f_max=1250):
-        self.data_list = load_manifest(manifest_path)
+        self.data_list = []
+        for manifest in manifest_path:
+            self.data_list.extend(load_manifest(manifest))
         
         self.sr = sr
         self.hop = hop
@@ -34,7 +36,7 @@ class DatasetWithHarmonic(Data.Dataset):
             f.seek(audio_start)
             audio = f.read(len_read, dtype='float32')
 
-            cfp = self._compute_cfp(audio)
+            cfp = self._compute_cfp(audio).astype(np.float32)
 
         f_melody = self.f0[index][label_start: label_start + self.len_seg]
         f_harmonic = self.f_harmonic[index][label_start: label_start + self.len_seg]

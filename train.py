@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.utils.data as Data
 
 from utils import *
-from dataset import DatasetWithHarmonic
+from dataset_online import DatasetWithHarmonic
 from models.msnet_harmonic_loss import MSNet
 from models.ftanet_harmonic_loss import FTANet
 
@@ -20,15 +20,7 @@ def train(train_manifest, test_manifest, batch_size, num_epoch, lr, step_size, t
             raise Exception("{} already exists!".format(save_path))
         os.mkdir(save_path)
 
-    train_x, train_y, train_mask = [], [], []
-    for manifest_path in train_manifest:
-        x, y, mask = load_data_by_segment(manifest_path, progress_bar=False)
-        train_x.append(x)
-        train_y.append(y)
-        train_mask.append(mask)
-    train_x, train_y, train_mask = np.vstack(train_x), np.vstack(train_y), np.vstack(train_mask)
-
-    dataset = DatasetWithHarmonic(train_x=train_x, train_y=train_y, train_mask=train_mask)
+    dataset = DatasetWithHarmonic(train_manifest)
     dataloader = Data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
 
     model = MSNet(device=device)

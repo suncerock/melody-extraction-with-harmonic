@@ -57,8 +57,8 @@ class MSNet(nn.Module):
         u1 = self.forward_feature_map(x)
         
         with torch.no_grad():
-            output = torch.softmax(u1, dim=1)
-            output = torch.softmax(output[:, 1], dim=1)
+            output = torch.softmax(u1, dim=1)[:, 1]
+            output = torch.sigmoid(output)
 
         if requires_loss:
             target = torch.zeros_like(y_subharmonic).long()
