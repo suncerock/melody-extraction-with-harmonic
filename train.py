@@ -8,19 +8,19 @@ import torch.nn as nn
 import torch.utils.data as Data
 
 from utils import *
-from dataset_online import DatasetWithHarmonic
+from dataset_online import CFPDatasetWithHarmonic
 from models.msnet_harmonic_loss import MSNet
 from models.ftanet_harmonic_loss import FTANet
 
 DEBUG = 0
 
-def train(train_manifest, test_manifest, batch_size, num_epoch, lr, step_size, threshold, device, save_path):
+def train(train_manifest, test_manifest, batch_size, num_epoch, lr, step_size, threshold, device, save_path, save_every):
     if not DEBUG:
         if os.path.exists(save_path):
             raise Exception("{} already exists!".format(save_path))
         os.mkdir(save_path)
 
-    dataset = DatasetWithHarmonic(train_manifest)
+    dataset = CFPDatasetWithHarmonic(train_manifest)
     dataloader = Data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
 
     model = MSNet(device=device)
@@ -49,8 +49,12 @@ def train(train_manifest, test_manifest, batch_size, num_epoch, lr, step_size, t
         train_loss /= step + 1
         scheduler.step()
 
-        print("----------------------")
+        # print("----------------------")
         print("Epoch={:3d}\tTrain_loss={:6.4f}".format(epoch, train_loss))
+        
+        if not epoch % save_every == save_every - 1:
+            continue
+        
         model.eval()
         for manifest_path in test_manifest:
             eval_arr = np.zeros(5, dtype=np.float32)

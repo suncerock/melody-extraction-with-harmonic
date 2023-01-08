@@ -99,7 +99,7 @@ class CFPDatasetWithHarmonic(Data.Dataset):
         start = random.randint(0, len(self.f0[index]) - self.len_seg)
         
         with h5py.File(self.cfp_path[index]) as f:
-            cfp = np.array(f['data'][..., start: start + self.len_seg])
+            cfp = np.array(f['data'][..., start: start + self.len_seg], dtype=np.float32)
 
         f_melody = self.f0[index][start: start + self.len_seg]
         f_harmonic = self.f_harmonic[index][start: start + self.len_seg]

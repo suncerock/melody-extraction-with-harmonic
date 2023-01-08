@@ -1,6 +1,7 @@
 import json
 from tqdm import tqdm
 
+import h5py
 import numpy as np
 
 import mir_eval
@@ -77,7 +78,8 @@ def read_one_manifest(manifest, f_min=32, f_max=1250):
     """
     cfp_path = manifest['cfp_path']
     f0_path = manifest['f0_path']
-    data_x = np.load(cfp_path)
+    with h5py.File(cfp_path) as f:
+        data_x = np.array(f['data'], dtype=np.float32)
     with open(f0_path) as f:
         data_y_mask = [(float(line.strip().split()[1]), float(line.strip().split()[2])) for line in f.readlines()]
     data_y_mask = np.array(data_y_mask)
