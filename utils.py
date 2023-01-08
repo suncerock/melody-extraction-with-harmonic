@@ -24,11 +24,16 @@ def img2bin(pred, threshold):
     return pred_bin
 
 def bin2img(y):
-    N = y.shape[0]
-    img = np.zeros([N, 320, LEN_SEG], dtype=np.int64)
-    for i in range(N):
-        img[i, y[i], np.arange(LEN_SEG)] = 1
-        img[i, :, y[i] == -1] = 0 
+    if len(y.shape) == 3:
+        N = y.shape[0]
+        img = np.zeros([N, 320, LEN_SEG], dtype=np.int64)
+        for i in range(N):
+            img[i, y[i], np.arange(LEN_SEG)] = 1
+            img[i, :, y[i] == -1] = 0
+    else:
+        img = np.zeros([320, LEN_SEG], dtype=np.int64)
+        img[y, np.arange(LEN_SEG)] = 1
+        img[:, y == -1] = 0
     return img
 
 def f02bin(y):

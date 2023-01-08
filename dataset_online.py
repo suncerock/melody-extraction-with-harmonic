@@ -1,21 +1,12 @@
+import random
+
 import numpy as np
-import scipy
-import torch
+import soundfile as sf
 import torch.utils.data as Data
 
 from scripts.extract_cfp import feature_extraction, norm, lognorm
 from utils import load_manifest, f02img
 
-# y = np.random.randn(800 * 10)
-# sr = 8000
-# hop = 80
-
-# Z, time, CenFreq, tfrL0, tfrLF, tfrLQ = feature_extraction(y, sr, Hop=hop, StartFreq=31.0, StopFreq=1250.0, NumPerOct=60)
-# Z, time, CenFreq, tfrL0, tfrLF, tfrLQ = feature_extraction(y, sr, Hop=hop, StartFreq=20.0, StopFreq=2048.0, NumPerOct=60)
-# tfrL0 = norm(lognorm(tfrL0))[np.newaxis,:,:]
-# tfrLF = norm(lognorm(tfrLF))[np.newaxis,:,:]
-# tfrLQ = norm(lognorm(tfrLQ))[np.newaxis,:,:]
-# W = np.concatenate((tfrL0,tfrLF,tfrLQ),axis=0)
 
 class DatasetWithHarmonic(Data.Dataset):
     def __init__(self, manifest_path, sr=8000, hop=80, len_seg=128, f_min=32, f_max=1250):
@@ -32,10 +23,34 @@ class DatasetWithHarmonic(Data.Dataset):
         self.f_harmonic, self.f_subharmonic = self._load_harmonic(self.f0, f_min, f_max)
 
     def __getitem__(self, index):
-        return self.wav_path[index], f02img(self.f0[index]), f02img(self.f_harmonic[index]), f02img(self.f_subharmonic[index]), self.f0_mask[index]
+        label_start = random.randint(0, len(self.f0[index]) - self.len_seg)
+        audio_start = label_start * self.hop
+        
+        with sf.SoundFile(self.wav_path[index]) as f:
+            sr = f.samplerate
+            assert sr == self.sr
+
+            len_read = self.len_seg * self.hop + self.hop
+            f.seek(audio_start)
+            audio = f.read(len_read, dtype='float32')
+
+            cfp = self._compute_cfp(audio)
+
+        f_melody = self.f0[index][label_start: label_start + self.len_seg]
+        f_harmonic = self.f_harmonic[index][label_start: label_start + self.len_seg]
+        f_subharmonic = self.f_subharmonic[index][label_start: label_start + self.len_seg]
+        f_mask = self.f0_mask[index][label_start: label_start + self.len_seg]
+        return cfp, f02img(f_melody), f02img(f_harmonic), f02img(f_subharmonic), f_mask
 
     def __len__(self):
         return len(self.data_list)
+
+    def _compute_cfp(self, audio):
+        _, _, _, tfrL0, tfrLF, tfrLQ = feature_extraction(audio, self.sr, Hop=self.hop, StartFreq=31.0, StopFreq=1250.0, NumPerOct=60)
+        tfrL0 = norm(lognorm(tfrL0))[np.newaxis,:,:]
+        tfrLF = norm(lognorm(tfrLF))[np.newaxis,:,:]
+        tfrLQ = norm(lognorm(tfrLQ))[np.newaxis,:,:]
+        return np.concatenate((tfrL0,tfrLF,tfrLQ),axis=0)
 
     def _load_f0(self, f0_path_list, f_min, f_max):
         f0, f0_mask = [], []
@@ -63,7 +78,7 @@ class DatasetWithHarmonic(Data.Dataset):
         return f_harmonic, f_subharmonic
 
 if __name__ == '__main__':
-    dataset = DatasetWithHarmonic(manifest_path='train_small.json')
+    dataset = DatasetWithHarmonic(manifest_path='unlabel_train_small.json')
     a, b, c, d, e = dataset[0]
-    print(a)
+    print(a.shape)
     print(b.shape, c.shape, d.shape, e.shape)
