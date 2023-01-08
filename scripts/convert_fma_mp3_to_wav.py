@@ -13,10 +13,13 @@ def convert_fma_mp3_to_wav(root_path, sr=8000):
 
     mp3_file_list = os.listdir(mp3_path)
     for mp3_file in tqdm(mp3_file_list):
-        y, _ = librosa.load(os.path.join(mp3_path, mp3_file), sr=sr, mono=True)
-        
-        wav_file = os.path.join(wav_path, mp3_file.replace('.mp3', '.wav'))
-        sf.write(wav_file, y, samplerate=sr)
+        try:
+            y, _ = librosa.load(os.path.join(mp3_path, mp3_file), sr=sr, mono=True)
+            
+            wav_file = os.path.join(wav_path, mp3_file.replace('.mp3', '.wav'))
+            sf.write(wav_file, y, samplerate=sr)
+        except:
+            pass
     
     return
 

@@ -42,6 +42,7 @@ class DatasetWithHarmonic(Data.Dataset):
         f_harmonic = self.f_harmonic[index][label_start: label_start + self.len_seg]
         f_subharmonic = self.f_subharmonic[index][label_start: label_start + self.len_seg]
         f_mask = self.f0_mask[index][label_start: label_start + self.len_seg]
+        assert cfp.shape[-1] == len(f_melody), self.wav_path[index]
         return cfp, f02img(f_melody), f02img(f_harmonic), f02img(f_subharmonic), f_mask
 
     def __len__(self):
