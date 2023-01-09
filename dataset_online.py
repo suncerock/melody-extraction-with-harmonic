@@ -117,6 +117,7 @@ class CFPDatasetWithHarmonic(Data.Dataset):
             with open(f0_path) as f:
                 data_y_mask = [(float(line.strip().split()[1]), float(line.strip().split()[2])) for line in f.readlines()]
                 data_y_mask = np.array(data_y_mask)
+                assert len(data_y_mask.shape) == 2, f0_path
                 data_y, data_mask = data_y_mask[:, 0].astype(np.float32), data_y_mask[:, 1].astype(np.int32)
                 data_y[(data_y < f_min) | (data_y > f_max)] = 0.0
             f0.append(data_y)

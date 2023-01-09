@@ -49,11 +49,11 @@ def train(train_manifest, test_manifest, batch_size, num_epoch, lr, step_size, t
         train_loss /= step + 1
         scheduler.step()
 
-        # print("----------------------")
-        print("Epoch={:3d}\tTrain_loss={:6.4f}".format(epoch, train_loss))
-        
         if not epoch % save_every == save_every - 1:
             continue
+        
+        print("----------------------")
+        print("Epoch={:3d}\tTrain_loss={:6.4f}".format(epoch, train_loss))
         
         model.eval()
         for manifest_path in test_manifest:

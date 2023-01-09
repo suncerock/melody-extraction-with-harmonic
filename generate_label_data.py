@@ -1,6 +1,7 @@
 import argparse
 from tqdm import tqdm
 
+import h5py
 import numpy as np
 import torch
 
@@ -8,7 +9,7 @@ from models.msnet_harmonic_loss import MSNet
 from models.ftanet_harmonic_loss import FTANet
 from utils import *
 
-def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_melody=0.004, threshold_non_melody=0.0035):
+def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_melody=0.6, threshold_non_melody=0.505):
     model = MSNet(device=device)
     model.load_state_dict(torch.load(ckpt, map_location=device))
 
@@ -18,7 +19,8 @@ def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_me
         f0_path = data['f0_path']
         f0ref, f0mask = [], []
 
-        x_data = np.load(cfp_path)
+        with h5py.File(cfp_path) as f:
+            x_data = np.array(f['data'], dtype=np.float32)
         y_data = np.zeros(x_data.shape[2])
         y_mask = np.zeros(x_data.shape[2])
         x_data, _, _ = segment_one_piece(x_data, y_data, y_mask)
@@ -38,8 +40,8 @@ def generate_label_data(manifest_path, ckpt, device, batch_size=16, threshold_me
             f0_seg = bin2f0(melody_bin) 
             
             melody_fail = (melody_prob < threshold_melody) & (melody_prob > threshold_non_melody)
-            harmonic_fail = (melody_prob > threshold_melody) & (harmonic_prob > threshold_melody) & ((harmonic_bin - melody_bin > 120) | (harmonic_bin - melody_bin < 0))
-            subharmonic_fail = (melody_prob > threshold_melody) & (subharmonic_prob > threshold_melody) & ((melody_bin - subharmonic_bin > 120) | (melody_bin - subharmonic_bin < 0))
+            harmonic_fail = (melody_prob > threshold_melody) & (harmonic_prob > threshold_melody) & ((harmonic_bin - melody_bin > 90) | (harmonic_bin - melody_bin < 30))
+            subharmonic_fail = (melody_prob > threshold_melody) & (subharmonic_prob > threshold_melody) & ((melody_bin - subharmonic_bin > 90) | (melody_bin - subharmonic_bin < 30))
             
             mask_seg[melody_fail | harmonic_fail | subharmonic_fail] = 0.0
             
@@ -60,8 +62,8 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--manifest_path', type=str)
     parser.add_argument('--ckpt', type=str)
     parser.add_argument('--device', type=str)
-    parser.add_argument('-p_min', '--threshold_melody', type=float, default=0.005)
-    parser.add_argument('-p_max', '--threshold_non_melody', type=float, default=0.0036)
+    parser.add_argument('-p_min', '--threshold_melody', type=float, default=0.6)
+    parser.add_argument('-p_max', '--threshold_non_melody', type=float, default=0.505)
 
     args = parser.parse_args()
 
