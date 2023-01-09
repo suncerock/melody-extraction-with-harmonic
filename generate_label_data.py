@@ -78,7 +78,6 @@ def generate_noise_mask(data, model, threshold_melody, threshold_non_melody, dev
         noise_fail = (melody_prob > threshold_melody) & (melody_prob_noise > threshold_melody) & (np.abs(melody_bin - melody_bin_noise) > 5)
         
         mask_seg[melody_fail | noise_fail] = 0.0
-
         f0ref.extend(f0_seg.flatten())
         f0mask.extend(mask_seg.flatten())
 
@@ -94,7 +93,11 @@ def generate_label_data(manifest_path, ckpt, device, mode='harmonics', batch_siz
         if mode == 'harmonics':
             f0ref, f0mask = generate_harmonic_mask(data, model, threshold_melody, threshold_non_melody, device=device, batch_size=batch_size)
         elif mode == 'noise':
-            f0ref, f0mask = generate_noise_mask(data, model, threshold_melody, threshold_non_melody, device=device, batch_size=batch_size)   
+            f0ref, f0mask = generate_noise_mask(data, model, threshold_melody, threshold_non_melody, device=device, batch_size=batch_size)
+        elif mode == 'both':
+            f0ref, f0mask_harmonic = generate_harmonic_mask(data, model, threshold_melody, threshold_non_melody, device=device, batch_size=batch_size)
+            _, f0mask_noise = generate_noise_mask(data, model, threshold_melody, threshold_non_melody, device=device, batch_size=batch_size)
+            f0mask = f0mask_harmonic * f0mask_noise
 
         lines = [['{:.3f}'.format(i / 100), '{:.3f}'.format(f0ref[i]), '{:.1f}'.format(f0mask[i])] for i in range(len(f0ref))]
         lines = ['\t'.join(line) + '\n' for line in lines]
@@ -109,8 +112,9 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--manifest_path', type=str)
     parser.add_argument('--ckpt', type=str)
     parser.add_argument('--device', type=str)
-    parser.add_argument('-p_min', '--threshold_melody', type=float, default=0.6)
-    parser.add_argument('-p_max', '--threshold_non_melody', type=float, default=0.505)
+    parser.add_argument('-p_min', '--threshold_melody', type=float, default=0.625)
+    parser.add_argument('-p_max', '--threshold_non_melody', type=float, default=0.502)
+    parser.add_argument('-m', '--mode', type=str, default='harmonics')
 
     args = parser.parse_args()
 
@@ -118,6 +122,7 @@ if __name__ == '__main__':
         manifest_path=args.manifest_path,
         ckpt=args.ckpt,
         device=args.device,
+        mode=args.mode,
         threshold_melody=args.threshold_melody,
         threshold_non_melody=args.threshold_non_melody
     )
