@@ -1,6 +1,7 @@
 import json
 from tqdm import tqdm
 
+import h5py
 import numpy as np
 
 import mir_eval
@@ -24,11 +25,16 @@ def img2bin(pred, threshold):
     return pred_bin
 
 def bin2img(y):
-    N = y.shape[0]
-    img = np.zeros([N, 320, LEN_SEG], dtype=np.int64)
-    for i in range(N):
-        img[i, y[i], np.arange(LEN_SEG)] = 1
-        img[i, :, y[i] == -1] = 0 
+    if len(y.shape) == 3:
+        N = y.shape[0]
+        img = np.zeros([N, 320, LEN_SEG], dtype=np.int64)
+        for i in range(N):
+            img[i, y[i], np.arange(LEN_SEG)] = 1
+            img[i, :, y[i] == -1] = 0
+    else:
+        img = np.zeros([320, LEN_SEG], dtype=np.int64)
+        img[y, np.arange(LEN_SEG)] = 1
+        img[:, y == -1] = 0
     return img
 
 def f02bin(y):
@@ -72,9 +78,14 @@ def read_one_manifest(manifest, f_min=32, f_max=1250):
     """
     cfp_path = manifest['cfp_path']
     f0_path = manifest['f0_path']
-    data_x = np.load(cfp_path)
+    with h5py.File(cfp_path) as f:
+        data_x = np.array(f['data'], dtype=np.float32)
     with open(f0_path) as f:
-        data_y_mask = [(float(line.strip().split()[1]), float(line.strip().split()[2])) for line in f.readlines()]
+        try:
+            data_y_mask = [(float(line.strip().split()[1]), float(line.strip().split()[2])) for line in f.readlines()]
+        except Exception:
+            print(f0_path)
+            raise Exception
     data_y_mask = np.array(data_y_mask)
     data_y, data_mask = data_y_mask[:, 0].astype(np.float32), data_y_mask[:, 1].astype(np.int32)
     data_y[(data_y < f_min) | (data_y > f_max)] = 0.0

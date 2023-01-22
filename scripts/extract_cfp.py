@@ -45,6 +45,7 @@ import soundfile as sf
 import os
 from tqdm import tqdm
 
+import h5py
 import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 import scipy
@@ -284,8 +285,11 @@ def getFreqIndArr(model_type, ref_arr,est_arr):
 def extract_cfp(audio_dir, cfp_dir):
     audio_list = os.listdir(audio_dir)
     for audio in tqdm(audio_list):
+        if os.path.exists(os.path.join(cfp_dir, audio.split('.')[0] + '.hdf5')):
+            os.remove(os.path.join(cfp_dir, audio.split('.')[0] + '.hdf5'))
         cfp, _, _ = cfp_process(os.path.join(audio_dir, audio), sr=8000, hop=80)
-        np.save(os.path.join(cfp_dir, audio.split('.')[0]), cfp)
+        with h5py.File(os.path.join(cfp_dir, audio.split('.')[0] + '.hdf5')) as f:
+            dset = f.create_dataset("data", data=cfp)
     return
 
 

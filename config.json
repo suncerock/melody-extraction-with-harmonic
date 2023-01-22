@@ -1,13 +1,15 @@
 {
-    "train_manifest": ["train_small.json"],
-    "test_manifest": ["train_small.json", "train_small.json"],
+    "train_manifest": ["MedleyDB.json", "MedleyDB.json", "unlabel_fma_small_part.json"],
+    "test_manifest": ["MIREX05.json", "ADC2004.json"],
 
     "batch_size": 32,
-    "num_epoch": 40,
+    "num_epoch": 1920,
     "lr": 4e-3,
+    "step_size": 320,
 
-    "threshold": 0.0036,
+    "threshold": 0.545,
 
-    "device": "cpu",
-    "save_path": "work_dir/test123"
+    "device": "cuda:0",
+    "save_path": "work_dir/fma3200_FTANet_harmonics",
+    "save_every": 80
 }
