@@ -3,13 +3,14 @@ import random
 import h5py
 import numpy as np
 import soundfile as sf
+import librosa
 import torch.utils.data as Data
 
 from scripts.extract_cfp import feature_extraction, norm, lognorm
 from utils import load_manifest, f02img
 
 
-class AudioDatasetWithHarmonic(Data.Dataset):
+class STFTDatasetWithHarmonic(Data.Dataset):
     def __init__(self, manifest_path, sr=8000, hop=80, len_seg=128, f_min=32, f_max=1250):
         self.data_list = []
         for manifest in manifest_path:
@@ -37,14 +38,14 @@ class AudioDatasetWithHarmonic(Data.Dataset):
             f.seek(audio_start)
             audio = f.read(len_read, dtype='float32')
 
-            cfp = self._compute_cfp(audio).astype(np.float32)
+            stft = librosa.stft(audio, n_fft=800, hop_length=self.hop)[:-1, 1:-1]
+            # cfp = self._compute_cfp(audio).astype(np.float32)
 
         f_melody = self.f0[index][label_start: label_start + self.len_seg]
         f_harmonic = self.f_harmonic[index][label_start: label_start + self.len_seg]
         f_subharmonic = self.f_subharmonic[index][label_start: label_start + self.len_seg]
         f_mask = self.f0_mask[index][label_start: label_start + self.len_seg]
-        assert cfp.shape[-1] == len(f_melody), self.wav_path[index]
-        return cfp, f02img(f_melody), f02img(f_harmonic), f02img(f_subharmonic), f_mask
+        return stft, f02img(f_melody), f02img(f_harmonic), f02img(f_subharmonic), f_mask
 
     def __len__(self):
         return len(self.data_list)
